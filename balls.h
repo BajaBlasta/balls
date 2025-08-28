@@ -45,6 +45,7 @@ typedef struct {
     float dt;
     uint32_t width;
     uint32_t height;
+    double total_kinetic_energy;
     bool show_metrics;
 } SimState;
 

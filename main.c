@@ -1,9 +1,9 @@
 #define WIDTH 1280
 #define HEIGHT 720
 #define TARGET_FPS 120
-#define N_PARTICLES 8
-#define GRAVITY 1200.0f // 9.81 m/s^2 on Earth
-#define DAMP_FAC 0.65f // velocity loss factor on collision
+#define N_PARTICLES 2
+#define GRAVITY 0.0f //1200.0f // 9.81 m/s^2 on Earth
+#define DAMP_FAC 1.0f // velocity loss factor on collision
 #define HEADLESS 0 // run sim backend without window and raylib draw calls
 
 #include <stdlib.h>
@@ -47,12 +47,12 @@ int main(void) {
                 // on quite easily.
                 Color color = (Color){p->color.r, p->color.g, p->color.b, p->color.a};
                 DrawCircle(p->pos.x, p->pos.y, p->radius, color);
-                //DrawText(TextFormat("%.2f,%.2f", p->vel.x, p->vel.y), p->pos.x, p->pos.y, 20, RAYWHITE);
             }
 
             if(state.show_metrics) {
                 DrawFPS(10, 10);
                 DrawText(TextFormat("%.2fms", state.dt * 1000.0f), 10, 30, 20, RAYWHITE);
+                DrawText(TextFormat("Ke=%.2f", state.total_kinetic_energy), 10, 50, 20, RAYWHITE);
             }
 
             EndDrawing();
