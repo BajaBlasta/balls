@@ -16,6 +16,18 @@ float dotp2D(Vector2D a, Vector2D b) {
     return a.x * b.x + a.y * b.y;
 }
 
+float mag2D(Vector2D v) {
+    return sqrt(v.x * v.x + v.y * v.y);
+}
+
+Vector2D mul2D(Vector2D a, Vector2D b) {
+    return (Vector2D){a.x * b.x, a.y * b.y};
+}
+
+Vector2D sub2D(Vector2D a, Vector2D b) {
+    return (Vector2D){a.x - b.x, a.y - b.y};
+}
+
 void init_sim_state(SimState* state, uint32_t n_particles) {
     state->n_particles = n_particles;
     state->particles = (Particle*) malloc(n_particles * sizeof(Particle));
@@ -23,7 +35,7 @@ void init_sim_state(SimState* state, uint32_t n_particles) {
     for(int i = 0; i < state->n_particles; ++i) {
         p = &state->particles[i];
         p->id = i;
-        p->radius = 50.0f;
+        p->radius = 5.0f; //randf(5.0f, 50.0f);
         p->pos = (Vector2D){randf(p->radius, state->width - p->radius), randf(p->radius, state->height - p->radius)};
         p->vel = (Vector2D){randf(-1000.0f, 1000.0f), randf(-1000.0f, 1000.0f)};
         p->acc = (Vector2D){0.0f, 0.0f};
@@ -39,14 +51,14 @@ void update_particle(Particle* p, SimState* state) {
     float width = (float) state->width;
     float height = (float) state->height;
 
-    p->acc.x = 0.0f;
-    p->acc.y = GRAVITY;
-
     p->vel.x += p->acc.x * dt;
     p->vel.y += p->acc.y * dt;
 
     p->pos.x += p->vel.x * dt;
     p->pos.y += p->vel.y * dt;
+
+    p->acc.x = 0.0f;
+    p->acc.y = GRAVITY;
 
     // Handle boundary collision
     if(p->pos.x - p->radius <= 0.0f) {
@@ -72,6 +84,7 @@ void resolve_collision(Particle* p1, Particle* p2) {
     // balls involved we can iterate starting at p1->id + 1
     // so we don't have to check twice.
     //global var reset every step
+    
     float dx = p2->pos.x - p1->pos.x; // also normal vector at point of collision
     float dy = p2->pos.y - p1->pos.y;
     float dist = sqrt(dx * dx + dy * dy); // distance between centers
@@ -109,6 +122,59 @@ void resolve_collision(Particle* p1, Particle* p2) {
     }
 }
 
+Vector2D norm2D(Vector2D v) {
+    Vector2D result = {0.0f, 0.0f};
+    float magnitude = sqrtf(v.x * v.x + v.y * v.y);
+    
+    if (magnitude >= 1e-7f) {
+        result.x = v.x / magnitude;
+        result.y = v.y / magnitude;
+    }
+    
+    return result;
+}
+
+void resolve_collision2(Particle* p1, Particle* p2) {
+    // NOTE: Since collision updates the velocity of both 
+    // balls involved we can iterate starting at p1->id + 1
+    // so we don't have to check twice.
+    // global var reset every step
+
+    Vector2D impact = (Vector2D){p2->pos.x - p1->pos.x, p2->pos.y - p1->pos.y};
+    float dist = mag2D(impact); // distance between centers
+    float min_dist = p1->radius + p2->radius; // minimum distance between centers given radii
+    if(dist < min_dist && dist > 0.0000001f) { // collision has occurred
+        float overlap = dist - min_dist;
+        Vector2D dir = norm2D(impact);
+        dir.x *= (overlap * 0.5f);
+        dir.y *= (overlap * 0.5f);
+        p1->pos.x += dir.x;
+        p1->pos.y += dir.y;
+        p2->pos.x -= dir.x;
+        p2->pos.y -= dir.y;
+
+        dist = min_dist;
+        impact = norm2D(impact);
+        impact.x *= dist;
+        impact.y *= dist;
+
+        float total_mass = p1->mass + p2->mass;
+        Vector2D vdiff = sub2D(p2->vel, p1->vel);
+        float num = dotp2D(vdiff, impact);
+        float den = total_mass * min_dist * min_dist;
+        Vector2D deltaVA = (Vector2D){impact.x, impact.y};
+        deltaVA.x *= (2.0f * p2->mass * num / den);
+        deltaVA.y *= (2.0f * p2->mass * num / den);
+        p1->vel.x += deltaVA.x;
+        p1->vel.y += deltaVA.y;
+        Vector2D deltaVB = (Vector2D){impact.x, impact.y};
+        deltaVB.x *= (-2.0f * p1->mass * num / den);
+        deltaVB.y *= (-2.0f * p1->mass * num / den);
+        p2->vel.x += deltaVB.x;
+        p2->vel.y += deltaVB.y;
+    }
+}
+
 double calc_total_kinetic_energy(SimState* state) {
     double ke = 0.0f; // total kinetic energy
     for(int i = 0; i < state->n_particles; ++i) {
@@ -128,7 +194,7 @@ void update_sim(SimState* state) {
         update_particle(p1, state);
         for(int j = p1->id + 1; j < state->n_particles; ++j) {
             Particle* p2 = &state->particles[j];
-            resolve_collision(p1, p2);
+            resolve_collision2(p1, p2);
         }
     }
     calc_total_kinetic_energy(state);
