@@ -45,8 +45,7 @@ typedef struct {
     float dt;
     uint32_t width;
     uint32_t height;
-    double total_kinetic_energy;
-    bool show_metrics;
+    float total_kinetic_energy;
 } SimState;
 
 void init_sim_state(SimState* state, uint32_t n_particles);
