@@ -11,7 +11,33 @@ uint32_t randu(uint32_t min, uint32_t max) {
     return (rand() % (max - min + 1)) + min;
 }
 
-// Returns the dot product between two 2D vectors
+Vector2D add2D(Vector2D a, Vector2D b) {
+    return (Vector2D){a.x + b.x, a.y + b.y};
+}
+
+Vector2D sub2D(Vector2D a, Vector2D b) {
+    return (Vector2D){a.x - b.x, a.y - b.y};
+}
+
+Vector2D mul2D(Vector2D a, Vector2D b) {
+    return (Vector2D){a.x * b.x, a.y * b.y};
+}
+
+Vector2D div2D(Vector2D a, Vector2D b) {
+    return (Vector2D){a.x / b.x, a.y / b.y};
+}
+
+Vector2D norm2D(Vector2D v) {
+    float nx = 0.0f;
+    float ny = 0.0f;
+    float mag = sqrtf(v.x * v.x + v.y * v.y);
+    if (mag >= 1e-7f) {
+        nx = v.x / mag;
+        ny = v.y / mag;
+    }
+    return (Vector2D){nx, ny};
+}
+
 float dotp2D(Vector2D a, Vector2D b) {
     return a.x * b.x + a.y * b.y;
 }
@@ -20,12 +46,8 @@ float mag2D(Vector2D v) {
     return sqrt(v.x * v.x + v.y * v.y);
 }
 
-Vector2D mul2D(Vector2D a, Vector2D b) {
-    return (Vector2D){a.x * b.x, a.y * b.y};
-}
-
-Vector2D sub2D(Vector2D a, Vector2D b) {
-    return (Vector2D){a.x - b.x, a.y - b.y};
+float dist2D(Vector2D a, Vector2D b) {
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.x - b.y) * (a.y - b.y));
 }
 
 void init_sim_state(SimState* state, uint32_t n_particles) {
@@ -35,7 +57,7 @@ void init_sim_state(SimState* state, uint32_t n_particles) {
     for(int i = 0; i < state->n_particles; ++i) {
         p = &state->particles[i];
         p->id = i;
-        p->radius = 5.0f; //randf(5.0f, 50.0f);
+        p->radius = 100.0f; //randf(5.0f, 50.0f);
         p->pos = (Vector2D){randf(p->radius, state->width - p->radius), randf(p->radius, state->height - p->radius)};
         p->vel = (Vector2D){randf(-1000.0f, 1000.0f), randf(-1000.0f, 1000.0f)};
         p->acc = (Vector2D){0.0f, 0.0f};
@@ -122,18 +144,6 @@ void resolve_collision(Particle* p1, Particle* p2) {
     }
 }
 
-Vector2D norm2D(Vector2D v) {
-    Vector2D result = {0.0f, 0.0f};
-    float magnitude = sqrtf(v.x * v.x + v.y * v.y);
-    
-    if (magnitude >= 1e-7f) {
-        result.x = v.x / magnitude;
-        result.y = v.y / magnitude;
-    }
-    
-    return result;
-}
-
 void resolve_collision2(Particle* p1, Particle* p2) {
     // NOTE: Since collision updates the velocity of both 
     // balls involved we can iterate starting at p1->id + 1
@@ -194,7 +204,7 @@ void update_sim(SimState* state) {
         update_particle(p1, state);
         for(int j = p1->id + 1; j < state->n_particles; ++j) {
             Particle* p2 = &state->particles[j];
-            resolve_collision2(p1, p2);
+            resolve_collision(p1, p2);
         }
     }
     calc_total_kinetic_energy(state);
